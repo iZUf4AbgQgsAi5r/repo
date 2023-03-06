@@ -1,0 +1,84 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expose the port the server will listen on
+EXPOSE 8000
+
+# Start the server when the container launches
+CMD ["python", "server.py"]
+
+
+
+
+
+
+
+
+
+# Define the job stages
+stages:
+  - build
+  - test
+  - deploy
+
+# Define the build job
+build:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:dind
+  script:
+    - docker build -t my-image .
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN my-registry.com:5000
+    - docker tag my-image my-registry.com:5000/my-image:$CI_COMMIT_SHA
+    - docker push my-registry.com:5000/my-image:$CI_COMMIT_SHA
+
+# Define the test job
+test:
+  stage: test
+  image: my-registry.com:5000/my-image:$CI_COMMIT_SHA
+  script:
+    - python -m unittest discover tests/
+
+# Define the deploy job
+deploy:
+  stage: deploy
+  image: docker:stable
+  services:
+    - docker:dind
+  script:
+    - docker pull my-registry.com:5000/my-image:$CI_COMMIT_SHA
+    - docker run -d --name my-container -p 8000:8000 my-registry.com:5000/my-image:$CI_COMMIT_SHA
+
+
+
+
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Copy the local folder named data to the folder named data in the container
+COPY data /app/data
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expose the port the server will listen on
+EXPOSE 8000
+
+# Start the server when the container launches
+CMD ["python", "server.py"]
